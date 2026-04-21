@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Manager</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI';
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            margin: 0;
+        }
+
+        .container {
+            width: 450px;
+            margin: 50px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        h2, h3 {
+            text-align: center;
+        }
+
+        input {
+            width: 95%;
+            padding: 10px;
+            margin: 6px 0;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            padding: 6px 10px;
+            margin: 3px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .add-btn { background: #4facfe; color: white; width: 100%; }
+        .delete-btn { background: red; color: white; }
+        .edit-btn { background: orange; color: white; }
+
+        li {
+            background: #f1f1f1;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h2>🎓 Student Manager</h2>
+
+    <input id="name" placeholder="Name">
+    <input id="course" placeholder="Course">
+    <button class="add-btn" onclick="addStudent()">Add Student</button>
+
+    <input id="search" placeholder="Search..." onkeyup="loadStudents()">
+
+    <div class="top-bar">
+        <h3>Students</h3>
+        <h3 id="count"></h3>
+    </div>
+
+    <ul id="list"></ul>
+
+</div>
+
+<script>
+
+    let editId = null;
+
+    async function addStudent() {
+        let name = document.getElementById('name').value;
+        let course = document.getElementById('course').value;
+
+        if(!name || !course){
+            alert("Fill all fields");
+            return;
+        }
+
+        if(editId){
+            await fetch('/students/' + editId, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, course })
+            });
+            editId = null;
+        } else {
+            await fetch('/students', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name, course })
+            });
+        }
+
+        document.getElementById('name').value = '';
+        document.getElementById('course').value = '';
+
+        loadStudents();
+    }
+
+    async function loadStudents() {
+        let res = await fetch('/students');
+        let data = await res.json();
+
+        let search = document.getElementById('search').value.toLowerCase();
+
+        let filtered = data.filter(s =>
+            s.name.toLowerCase().includes(search) ||
+            s.course.toLowerCase().includes(search)
+        );
+
+        document.getElementById('count').innerText = "Total: " + filtered.length;
+
+        let list = document.getElementById('list');
+        list.innerHTML = '';
+
+        filtered.forEach(s => {
+            let li = document.createElement('li');
+
+            let text = document.createElement('span');
+            text.innerText = s.name + " (" + s.course + ")";
+
+            let del = document.createElement('button');
+            del.innerText = "Delete";
+            del.className = "delete-btn";
+            del.onclick = async () => {
+                await fetch('/students/' + s.id, {method: 'DELETE'});
+                loadStudents();
+            };
+
+            let edit = document.createElement('button');
+            edit.innerText = "Edit";
+            edit.className = "edit-btn";
+            edit.onclick = () => {
+                document.getElementById('name').value = s.name;
+                document.getElementById('course').value = s.course;
+                editId = s.id;
+            };
+
+            li.appendChild(text);
+            li.appendChild(edit);
+            li.appendChild(del);
+            list.appendChild(li);
+        });
+    }
+
+    loadStudents();
+
+</script>
+
+</body>
+</html>
