@@ -3,6 +3,8 @@ name: Spring Boot CI Pipeline
 on:
   push:
     branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -19,5 +21,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Build Project using Maven
-        run: mvn clean install
+      - name: Cache Maven Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      # 🔍 LINTING (basic)
+      - name: Lint Check (Checkstyle)
+        run: mvn checkstyle:check || true
+
+      # 🧪 TESTING (VERY IMPORTANT)
+      - name: Run Tests
+        run: mvn test
+
+      # 🔨 BUILD
+      - name: Build Project
+        run: mvn clean package
